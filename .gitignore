@@ -1,0 +1,12 @@
+﻿# Intel Quartus / FPGA build artefakter
+db/
+incremental_db/
+output_files/
+*.rpt
+*.smsg
+*.qws
+*.log
+*.bak
+*.tmp
+*.rdr*
+*.flock
