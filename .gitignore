@@ -10,3 +10,37 @@ output_files/
 *.tmp
 *.rdr*
 *.flock
+# --- Simulation/Questa/ModelSim ---
+simulation/
+*.vo
+*.sft
+*.wlf
+*.vcd
+*.vvp
+transcript
+vsim.wlf
+work/
+
+# --- Quartus build/outputs ---
+db/
+incremental_db/
+output_files/
+
+# Vanliga kvartus-/buildfiler
+*.qdf
+*.sof
+*.pof
+*.jic
+*.smsg
+*.rpt
+*.qws
+*.eqn
+*.summary
+*.qdb
+*.sld
+*.ddb
+*.bak
+*.tmp
+*.log
+*.rdr*
+*.flock
