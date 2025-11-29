@@ -1,3 +1,5 @@
+/*
+
 module apple(
   input  wire        clk,
   input  wire        reset_n,   // kan vara kvar, men används inte
@@ -17,3 +19,4 @@ module apple(
     end
   end
 endmodule
+*/

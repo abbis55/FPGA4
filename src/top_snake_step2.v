@@ -54,6 +54,7 @@ module top_snake_step2(
   wire [1:0] dir;
   input_controller_adv u_ctrl(
     .clk(clk_pix),
+    .reset_n(reset_n),
     .up_n(BTN_UP_N), .left_n(BTN_LEFT_N),
     .down_n(BTN_DOWN_N), .right_n(BTN_RIGHT_N),
     .dir(dir)
@@ -143,10 +144,6 @@ module top_snake_step2(
     body_bus_x_d <= body_bus_x;
     body_bus_y_d <= body_bus_y;
   end
-
-
-
-
 
   // === Kropps-pixel: OR av träffar för segment 1..len-1 ===
 integer k;

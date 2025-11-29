@@ -53,10 +53,6 @@ module apple_simple(
     end
     else if (arm) begin
       // 2) nästa cykel: beräkna ny position från det samplade rnd_s
-      //    + små offsets (7/13) minskar risken för samma ruta
-      //apple_x <= ((rnd_s[9:0] + 10'd7 ) % (GRID_W-2)) * CELL + CELL;  // 10..620
-      //apple_y <= ((rnd_s[8:0] + 9'd13) % (GRID_H-2)) * CELL + CELL;  // 10..460
-      // i apple_simple när du använder rnd_s:
   apple_x <= (((rnd_s[9:0]  ^ {2'b00, salt})       % (GRID_W-2)) * CELL) + CELL;  // 10..620
   apple_y <= (((rnd_s[8:0]  ^ {1'b0,  salt[7:0]})  % (GRID_H-2)) * CELL) + CELL;  // 10..460
 

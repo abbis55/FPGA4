@@ -29,8 +29,8 @@ module snake_core_grow #(
   localparam [8:0] MAX_Y    = (GRID_H-2)*CELL; // 460
 
   // Start i mitten (justerat till 10x10-rutnät)
-  localparam [9:0] START_X0 = 10'd310;
-  localparam [8:0] START_Y0 = 9'd230;
+  localparam [9:0] START_X0 = 10'd370;
+  localparam [8:0] START_Y0 = 9'd280;
 
   // Interna segmentlistor
   reg [9:0] seg_x [0:MAX_LEN-1];
@@ -82,10 +82,6 @@ reg init_done = 1'b0;
         2'd2: seg_y[0] <= (seg_y[0] >= MAX_Y)    ? MAX_Y    : (seg_y[0] + CELL); // DOWN
         2'd3: seg_x[0] <= (seg_x[0] >= MAX_X)    ? MAX_X    : (seg_x[0] + CELL); // RIGHT
       endcase
-
-      // 3) väx med 1 segment om “ät”
-      //if (eat_evt && (length < MAX_LEN))
-        //length <= length + 8'd1;
 
         
         // 3) väx: duplicera svansen + öka length

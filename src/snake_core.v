@@ -1,3 +1,4 @@
+/*
 // snake_core.v — Verilog-2001-kompatibel "lite"-kärna
 // Håller intern segmentlista, exponerar huvud + första kropp som portar.
 
@@ -86,3 +87,4 @@ endmodule
 
 
 
+*/
