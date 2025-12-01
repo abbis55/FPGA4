@@ -82,6 +82,32 @@ module top_snake_step2 (
       .tick(tick)
   );
 
+wire eat_evt;  // ersätter gamla assign
+
+
+
+
+  // === Snake core ===
+  wire [9:0] head_x;
+  wire [8:0] head_y;
+  wire [7:0] snake_len;
+
+
+  // === Apple ===
+  wire [9:0] apple_x;
+  wire [8:0] apple_y;
+
+
+collision #(.CELL(CELL)) u_collision (
+  .clk_pix (clk_pix),
+  .reset_n (reset_n),
+  .tick    (tick),
+  .head_x  (head_x),
+  .head_y  (head_y),
+  .apple_x (apple_x),
+  .apple_y (apple_y),
+  .eat_evt (eat_evt)
+);
 
 
 
@@ -110,28 +136,11 @@ module top_snake_step2 (
 
 
 
-
-  // === Snake core ===
-  wire [9:0] head_x;
-  wire [8:0] head_y;
-  wire [7:0] snake_len;
-
-
-
-
-
-
   // === Snake core (med bussar) ===
   localparam integer MAX_BODY = 32;
   localparam integer MAX_LEN = MAX_BODY + 1;
 
 
-
-
-
-
-  // eat_evt kommer längre ner (kollision)
-  wire                  eat_evt;
 
 
   wire [MAX_LEN*10-1:0] body_bus_x;
@@ -177,27 +186,12 @@ module top_snake_step2 (
 
   );
 
-
-
-
-
-
-
-  // === moved_once: blir 1 efter första tick (för apple_simple) ===
-  reg moved_once = 1'b0;
-  always @(posedge clk_pix) begin
-    if (!reset_n) moved_once <= 1'b0;
-    else if (tick) moved_once <= 1'b1;
-  end
-
-
-
-
-  // === Apple ===
-  wire [9:0] apple_x;
-  wire [8:0] apple_y;
-
-
+// === moved_once: blir 1 efter första tick (krävs av apple_simple) ===
+reg moved_once = 1'b0;
+always @(posedge clk_pix) begin
+  if (!reset_n) moved_once <= 1'b0;
+  else if (tick) moved_once <= 1'b1;
+end
 
 
   apple_simple u_apple (
@@ -225,29 +219,6 @@ module top_snake_step2 (
   );
 
 
-  // === Kollision huvud vs äpple (edge-detekterad puls) ===
-  wire collide_now =
-       (head_x < (apple_x + CELL)) &&
-       ((head_x + CELL) > apple_x) &&
-       (head_y < (apple_y + CELL)) &&
-       ((head_y + CELL) > apple_y);
-
-
-
-
-  reg collide_now_d = 1'b0;
-  reg eat_evt_r = 1'b0;
-  assign eat_evt = eat_evt_r;
-
-
-
-
-  always @(posedge clk_pix) begin
-    collide_now_d <= collide_now;
-    // var tidigare: eat_evt_r <= collide_now & ~collide_now_d;
-    eat_evt_r     <= (collide_now & ~collide_now_d) & moved_once;  // <-- lägg till & moved_once
-  end
-
 
 
   // === Score som två BCD-siffror (0..99) ===
@@ -258,7 +229,7 @@ module top_snake_step2 (
     if (!reset_n) begin
       score_ones <= 4'd0;
       score_tens <= 4'd0;
-    end else if (eat_evt_r) begin
+    end else if (eat_evt) begin
       if (score_ones == 4'd9) begin
         score_ones <= 4'd0;
         if (score_tens == 4'd9) score_tens <= 4'd0;
@@ -269,20 +240,12 @@ module top_snake_step2 (
     end
   end
 
-
   // === Latch per frame ===
   reg [9:0] head_x_d, apple_x_d;
   reg [8:0] head_y_d, apple_y_d;
   reg [7:0] snake_len_d = 8'd2;
   reg [MAX_LEN*10-1:0] body_bus_x_d;
   reg [MAX_LEN*9 -1:0] body_bus_y_d;
-
-
-
-
-
-
-
 
   always @(posedge clk_pix)
     if (frame_start) begin
