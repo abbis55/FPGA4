@@ -21,11 +21,12 @@ module top_snake_step2 (
   localparam integer CELL = 10;
   localparam integer GRID_W = 64;  // 640/10
   localparam integer GRID_H = 48;  // 480/10
+  localparam integer MAX_BODY = 32;
+  localparam integer MAX_LEN = MAX_BODY + 1;
 
   localparam [9:0] BORDER_X = 10;  // 10 px ram till vänster/höger
   localparam [8:0] BORDER_Y = 9'd10;  // 10 px ram upp/ner
-  //localparam [9:0] MAX_X = (GRID_W - 2) * CELL;  // 620 vid CELL=10
-  //localparam [8:0] MAX_Y = (GRID_H - 2) * CELL;  // 460 vid CELL=10
+
 
 
 
@@ -82,7 +83,7 @@ module top_snake_step2 (
       .tick(tick)
   );
 
-wire eat_evt;  // ersätter gamla assign
+  wire eat_evt;  // ersätter gamla assign
 
 
 
@@ -98,16 +99,18 @@ wire eat_evt;  // ersätter gamla assign
   wire [8:0] apple_y;
 
 
-collision #(.CELL(CELL)) u_collision (
-  .clk_pix (clk_pix),
-  .reset_n (reset_n),
-  .tick    (tick),
-  .head_x  (head_x),
-  .head_y  (head_y),
-  .apple_x (apple_x),
-  .apple_y (apple_y),
-  .eat_evt (eat_evt)
-);
+  collision #(
+      .CELL(CELL)
+  ) u_collision (
+      .clk_pix(clk_pix),
+      .reset_n(reset_n),
+      .tick   (tick),
+      .head_x (head_x),
+      .head_y (head_y),
+      .apple_x(apple_x),
+      .apple_y(apple_y),
+      .eat_evt(eat_evt)
+  );
 
 
 
@@ -137,8 +140,7 @@ collision #(.CELL(CELL)) u_collision (
 
 
   // === Snake core (med bussar) ===
-  localparam integer MAX_BODY = 32;
-  localparam integer MAX_LEN = MAX_BODY + 1;
+
 
 
 
@@ -204,7 +206,17 @@ end
       .apple_y(apple_y)
   );
 
-  wire score_pix_on;
+  wire [3:0] score_tens, score_ones;
+
+  score_counter u_score (
+      .clk_pix(clk_pix),
+      .reset_n(reset_n),
+      .eat_evt(eat_evt),
+      .tens   (score_tens),
+      .ones   (score_ones)
+  );
+
+
 
   score_display #(
       .SCORE_X(16),  // flytta siffrorna med dessa två
@@ -217,28 +229,6 @@ end
       .ones(score_ones),
       .pixel_on(score_pix_on)
   );
-
-
-
-
-  // === Score som två BCD-siffror (0..99) ===
-  reg [3:0] score_ones = 4'd0;
-  reg [3:0] score_tens = 4'd0;
-
-  always @(posedge clk_pix) begin
-    if (!reset_n) begin
-      score_ones <= 4'd0;
-      score_tens <= 4'd0;
-    end else if (eat_evt) begin
-      if (score_ones == 4'd9) begin
-        score_ones <= 4'd0;
-        if (score_tens == 4'd9) score_tens <= 4'd0;
-        else score_tens <= score_tens + 4'd1;
-      end else begin
-        score_ones <= score_ones + 4'd1;
-      end
-    end
-  end
 
   // === Latch per frame ===
   reg [9:0] head_x_d, apple_x_d;
