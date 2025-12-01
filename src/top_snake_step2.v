@@ -124,11 +124,28 @@ localparam integer MAX_LEN  = MAX_BODY + 1;
 wire [MAX_LEN*10-1:0] body_bus_x;
 wire [MAX_LEN*9 -1:0] body_bus_y;
 
+// --- före instansen ---
+wire self_hit;
+reg  game_over = 1'b0;
+wire tick_run;                  // deklaration
+
+
+
+// Latcha game_over på självkrock
+always @(posedge clk_pix) begin
+  if (!reset_n)
+    game_over <= 1'b0;
+  else if (tick && self_hit)
+    game_over <= 1'b1;
+end
+
+assign tick_run = tick & ~game_over;   // definiera innan instansen
 
  snake_core_grow #(.CELL(CELL), .GRID_W(GRID_W), .GRID_H(GRID_H),
   .MAX_BODY(MAX_BODY), .MAX_LEN(MAX_LEN)) u_snake(
     .clk_pix(clk_pix),
-    .tick(tick),
+    .tick(tick_run),          // <--- använd gatad tick
+    
     .reset_n(reset_n),
     .dir(dir),
     .eat_evt(eat_evt),
@@ -138,10 +155,14 @@ wire [MAX_LEN*9 -1:0] body_bus_y;
 
 
   .body_bus_x(body_bus_x),
-  .body_bus_y(body_bus_y)
+  .body_bus_y(body_bus_y),
+  .self_hit(self_hit)       // <--- NY
 
 
   );
+
+
+
 
 
 

@@ -1,9 +1,9 @@
 
 
 // ===========================================================
-// snake_core_grow.v — Kärna utan tillväxt (fast längd = 2)
-// Behåller gränssnittet (eat_evt-porten ignoreras)
-// Exponerar head_x/head_y/length + packade bussar för kroppen
+// + // snake_core_grow.v — Kärna med tillväxt (eat_evt används)
+// 
+// 
 // ===========================================================
 module snake_core_grow #(
   parameter integer CELL    = 10,
@@ -24,6 +24,8 @@ module snake_core_grow #(
   output reg  [9:0] head_x,
   output reg  [8:0] head_y,
   output reg  [7:0] length,
+
+  output reg self_hit,   // 1-cykel-puls på tick när nya huvudpositionen krockar med kroppen
 
 
   // Packade bussar: [seg0][seg1]...[segN] (MSB=seg0), seg0 = head
@@ -78,8 +80,17 @@ reg       ate_latch;    // <-- fångar eat_evt tills nästa tick
 
 
   always @(posedge clk_pix) begin
+          reg [9:0] tail_old_x;
+      reg [8:0] tail_old_y;
+
+          reg [9:0] nx;
+    reg [8:0] ny;
+
+        integer j;
+    reg hit;
+
     if (!reset_n) begin
-      length   <= 8'd3;          // start: head + 1 kropp
+      length   <= 8'd2;          // start: head + 1 kropp
       seg_x[0] <= START_X0;
       seg_y[0] <= START_Y0;          // head
       seg_x[1] <= START_X0-CELL;
@@ -95,7 +106,7 @@ reg       ate_latch;    // <-- fångar eat_evt tills nästa tick
 
     end
     else if (!init_done) begin
-      length   <= 8'd3;
+      length   <= 8'd2;
       seg_x[0] <= START_X0;
       seg_y[0] <= START_Y0;
       seg_x[1] <= START_X0-CELL;
@@ -107,27 +118,43 @@ reg       ate_latch;    // <-- fångar eat_evt tills nästa tick
 
     end else if (tick) begin
       // spara svansens GAMLA position innan skift
-      reg [9:0] tail_old_x;
-      reg [8:0] tail_old_y;
+
       tail_old_x = seg_x[length-1];
       tail_old_y = seg_y[length-1];
 
 
       // 1) skifta kroppen bakifrån (bara element < length)
       for (i=MAX_LEN-1; i>0; i=i-1)
-        if (i < length) begin
+        begin
           seg_x[i] <= seg_x[i-1];
           seg_y[i] <= seg_y[i-1];
         end
 
 
-      // 2) flytta huvud (med kläm)
-      case (dir)
-        2'd0: seg_y[0] <= (seg_y[0] <= BORDER_Y) ? BORDER_Y : (seg_y[0] - CELL); // UP
-        2'd1: seg_x[0] <= (seg_x[0] <= BORDER_X) ? BORDER_X : (seg_x[0] - CELL); // LEFT
-        2'd2: seg_y[0] <= (seg_y[0] >= MAX_Y)    ? MAX_Y    : (seg_y[0] + CELL); // DOWN
-        2'd3: seg_x[0] <= (seg_x[0] >= MAX_X)    ? MAX_X    : (seg_x[0] + CELL); // RIGHT
-      endcase
+ // 0) räkna ut nästa huvudpos (klämd)
+
+    nx = seg_x[0];
+    ny = seg_y[0];
+
+    case (dir)
+      2'd0: ny = (ny <= BORDER_Y) ? BORDER_Y : (ny - CELL); // UP
+      2'd1: nx = (nx <= BORDER_X) ? BORDER_X : (nx - CELL); // LEFT
+      2'd2: ny = (ny >= MAX_Y)    ? MAX_Y    : (ny + CELL); // DOWN
+      2'd3: nx = (nx >= MAX_X)    ? MAX_X    : (nx + CELL); // RIGHT
+    endcase
+
+    // 2) kolla självkrock mot de skiftade segmenten 1..length-1
+
+hit = 1'b0;
+for (j = 1; j < MAX_LEN; j = j+1) begin
+  if (j < length) begin
+    if ((nx == seg_x[j]) && (ny == seg_y[j]))
+      hit = 1'b1;
+  end
+end
+self_hit <= hit;
+
+
 
 
       // 3) väx: duplicera SVANSENS gamla position
@@ -139,8 +166,11 @@ reg       ate_latch;    // <-- fångar eat_evt tills nästa tick
 
 
       // 4) exportera head
-      head_x <= seg_x[0];
-      head_y <= seg_y[0];
+    seg_x[0] <= nx;
+    seg_y[0] <= ny;
+
+      head_x <= nx;
+      head_y <= ny;
     end
   end
 
