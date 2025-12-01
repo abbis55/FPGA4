@@ -14,19 +14,34 @@ module top_snake_step2(
   output wire        VGA_VS
 );
 
+
+
+
   // --- parametrar för top ---
   localparam integer CELL     = 10;
   localparam integer GRID_W   = 64;   // 640/10
   localparam integer GRID_H   = 48;   // 480/10
-  localparam integer MAX_LEN  = 32;
+ 
+  localparam [9:0] BORDER_X = 10;                   // 10 px ram till vänster/höger
+  localparam [8:0] BORDER_Y = 9'd10;                // 10 px ram upp/ner
+  localparam [9:0] MAX_X    = (GRID_W-2)*CELL;      // 620 vid CELL=10
+  localparam [8:0] MAX_Y    = (GRID_H-2)*CELL;      // 460 vid CELL=10
+
+
 
   // === Pixelklocka ===
   wire clk_pix;
   clk_pixel u_clk(.clk50(CLOCK_50), .clk_pix(clk_pix));
 
+
+
+
   // === Reset ===
   wire reset_n;
   por_reset u_por(.clk(clk_pix), .reset_n(reset_n));
+
+
+
 
   // === VGA-signal ===
   wire [9:0] x, y;
@@ -40,8 +55,14 @@ module top_snake_step2(
   assign VGA_HS = hsync;
   assign VGA_VS = vsync;
 
+
+
+
   // Bildrute-start (för latch)
   wire frame_start = (x == 10'd0) && (y == 10'd0);
+
+
+
 
   // === Speltick (ca 5 steg/s) ===
   wire tick;
@@ -49,6 +70,9 @@ module top_snake_step2(
     .clk(clk_pix),
     .tick(tick)
   );
+
+
+
 
   // === Riktning ===
   wire [1:0] dir;
@@ -60,6 +84,9 @@ module top_snake_step2(
     .dir(dir)
   );
 
+
+
+
   // === Slumpgenerator ===
   wire [15:0] rnd;
   lfsr_random u_lfsr(
@@ -68,17 +95,38 @@ module top_snake_step2(
     .rnd(rnd)
   );
 
-  // === snake_core_grow: huvud + kropp (växer på eat_evt) ===
+
+
+
+ // === Snake core ===
   wire [9:0] head_x;
   wire [8:0] head_y;
   wire [7:0] snake_len;
-  wire [MAX_LEN*10-1:0] body_bus_x;
-  wire [MAX_LEN*9 -1:0]  body_bus_y;
+
+
+
+
+
+
+// === Snake core (med bussar) ===
+localparam integer MAX_BODY = 32;
+localparam integer MAX_LEN  = MAX_BODY + 1;
+
+
+
+
+
 
   // eat_evt kommer längre ner (kollision)
   wire eat_evt;
 
-  snake_core_grow #(.CELL(CELL), .GRID_W(GRID_W), .GRID_H(GRID_H), .MAX_LEN(MAX_LEN)) u_snake(
+
+wire [MAX_LEN*10-1:0] body_bus_x;
+wire [MAX_LEN*9 -1:0] body_bus_y;
+
+
+ snake_core_grow #(.CELL(CELL), .GRID_W(GRID_W), .GRID_H(GRID_H),
+  .MAX_BODY(MAX_BODY), .MAX_LEN(MAX_LEN)) u_snake(
     .clk_pix(clk_pix),
     .tick(tick),
     .reset_n(reset_n),
@@ -86,10 +134,17 @@ module top_snake_step2(
     .eat_evt(eat_evt),
     .head_x(head_x),
     .head_y(head_y),
-    .length(snake_len),
-    .body_bus_x(body_bus_x),
-    .body_bus_y(body_bus_y)
+    .length(snake_len),          // <--- lägg till
+
+
+  .body_bus_x(body_bus_x),
+  .body_bus_y(body_bus_y)
+
+
   );
+
+
+
 
   // === moved_once: blir 1 efter första tick (för apple_simple) ===
   reg moved_once = 1'b0;
@@ -98,9 +153,15 @@ module top_snake_step2(
     else if (tick)      moved_once <= 1'b1;
   end
 
+
+
+
   // === Apple ===
   wire [9:0] apple_x;
   wire [8:0] apple_y;
+
+
+
 
   apple_simple u_apple(
     .clk_pix(clk_pix),
@@ -112,6 +173,9 @@ module top_snake_step2(
     .apple_y(apple_y)
   );
 
+
+
+
   // === Kollision huvud vs äpple (edge-detekterad puls) ===
   wire collide_now =
        (head_x < (apple_x + CELL)) &&
@@ -119,44 +183,55 @@ module top_snake_step2(
        (head_y < (apple_y + CELL)) &&
        ((head_y + CELL) > apple_y);
 
+
+
+
   reg collide_now_d = 1'b0;
   reg eat_evt_r     = 1'b0;
   assign eat_evt = eat_evt_r;
 
+
+
+
   always @(posedge clk_pix) begin
     collide_now_d <= collide_now;
-    eat_evt_r     <= collide_now & ~collide_now_d; // puls när kollision börjar
+      // var tidigare: eat_evt_r <= collide_now & ~collide_now_d;
+  eat_evt_r     <= (collide_now & ~collide_now_d) & moved_once;  // <-- lägg till & moved_once
   end
 
-  // === Latcha allt för stabil ritning per frame ===
-  reg [9:0]  head_x_d, apple_x_d;
-  reg [8:0]  head_y_d, apple_y_d;
-  reg [7:0]  snake_len_d;
-  reg [MAX_LEN*10-1:0] body_bus_x_d;
-  reg [MAX_LEN*9 -1:0]  body_bus_y_d;
 
-  always @(posedge clk_pix) if (frame_start) begin
-    head_x_d     <= head_x;
-    head_y_d     <= head_y;
-    apple_x_d    <= apple_x;
-    apple_y_d    <= apple_y;
-    snake_len_d  <= snake_len;
-    body_bus_x_d <= body_bus_x;
-    body_bus_y_d <= body_bus_y;
-  end
 
-  // === Kropps-pixel: OR av träffar för segment 1..len-1 ===
+
+// === Latch per frame ===
+reg [9:0]  head_x_d, apple_x_d;
+reg [8:0]  head_y_d, apple_y_d;
+reg [7:0]  snake_len_d = 8'd2;
+reg [MAX_LEN*10-1:0] body_bus_x_d;
+reg [MAX_LEN*9 -1:0]  body_bus_y_d;
+
+
+
+
+
+
+
+
+always @(posedge clk_pix) if (frame_start) begin
+  head_x_d     <= head_x;
+  head_y_d     <= head_y;
+  apple_x_d    <= apple_x;
+  apple_y_d    <= apple_y;
+  snake_len_d  <= snake_len;
+  body_bus_x_d <= body_bus_x;
+  body_bus_y_d <= body_bus_y;
+end
+// === Kroppen: OR av segment 1..len-1 ===
 integer k;
 reg body_hit_cell;
 always @* begin
   body_hit_cell = 1'b0;
   for (k = 1; k < MAX_LEN; k = k + 1) begin
     if (k < snake_len_d) begin
-              // plocka slice för seg[k] (packad med seg0 som MSB)
-        // X-slice:
-        //   msb_x = (MAX_LEN-k)*10-1
-        // Y-slice:
-        //   msb_y = (MAX_LEN-k)*9 -1
       body_hit_cell = body_hit_cell |
         ( (x >= body_bus_x_d[(MAX_LEN-k)*10-1 -: 10]) &&
           (x <  body_bus_x_d[(MAX_LEN-k)*10-1 -: 10] + CELL) &&
@@ -166,25 +241,49 @@ always @* begin
   end
 end
 
+
+wire [9:0] hy10 = {1'b0, head_y_d};
+wire [9:0] ay10 = {1'b0, apple_y_d};
+
+
+wire head_px = disp &&
+               (x >= head_x_d) && (x < head_x_d + CELL) &&
+               (y >= hy10)     && (y < hy10 + CELL);
+
+
 wire body_px = disp && body_hit_cell;
 
 
-  // === Pixelmasker för huvud/äpple (från latched värden) ===
-  wire [9:0] hy10 = {1'b0, head_y_d};
-  wire [9:0] ay10 = {1'b0, apple_y_d};
+wire apple_px = disp &&
+                (x >= apple_x_d) && (x < apple_x_d + CELL) &&
+                (y >= ay10)      && (y < ay10 + CELL);
 
-  wire head_px  = disp &&
-                  (x >= head_x_d) && (x < head_x_d + CELL) &&
-                  (y >= hy10)     && (y < hy10     + CELL);
+                // === Vit ram runt spelplanen ===
+wire border_px =
+    disp && (
+        (x < BORDER_X) ||
+        (x >= MAX_X + CELL) ||
+        (y < BORDER_Y) ||
+        (y >= MAX_Y + CELL)
+    );
 
-  wire apple_px = disp &&
-                  (x >= apple_x_d) && (x < apple_x_d + CELL) &&
-                  (y >= ay10)      && (y < ay10      + CELL);
 
-  // === Färger: huvud = grön, kropp = svag grön, äpple = röd ===
-  assign VGA_R = disp ? (apple_px ? 4'hF : 4'h0) : 4'h0;
-  assign VGA_G = disp ? (head_px  ? 4'hF :
-                         body_px  ? 4'h8 : 4'h0) : 4'h0;
-  assign VGA_B = 4'h0;
+
+// färger
+assign VGA_R = disp ? ( border_px ? 4'hF : (apple_px ? 4'hF : 4'h0) ) : 4'h0;
+
+assign VGA_G = disp ? ( head_px ? 4'hF :
+                        body_px ? 4'h8 :
+                        border_px ? 4'hF :
+                        4'h0 ) : 4'h0;
+
+assign VGA_B = disp ? ( border_px ? 4'hF : 4'h0 ) : 4'h0;
+
+
 
 endmodule
+
+
+
+
+
