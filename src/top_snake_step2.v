@@ -29,7 +29,6 @@ module top_snake_step2 (
 
 
 
-
   // === Pixelklocka ===
   wire clk_pix;
   clk_pixel u_clk (
@@ -39,15 +38,12 @@ module top_snake_step2 (
 
 
 
-
   // === Reset ===
   wire reset_n;
   por_reset u_por (
       .clk(clk_pix),
       .reset_n(reset_n)
   );
-
-
 
 
   // === VGA-signal ===
@@ -65,12 +61,8 @@ module top_snake_step2 (
   assign VGA_VS = vsync;
 
 
-
-
   // Bildrute-start (för latch)
   wire frame_start = (x == 10'd0) && (y == 10'd0);
-
-
 
 
   // === Speltick (ca 5 steg/s) ===
@@ -84,7 +76,6 @@ module top_snake_step2 (
   );
 
   wire eat_evt;  // ersätter gamla assign
-
 
 
 
@@ -140,19 +131,12 @@ module top_snake_step2 (
 
 
   // === Snake core (med bussar) ===
-
-
-
-
-
   wire [MAX_LEN*10-1:0] body_bus_x;
   wire [MAX_LEN*9 -1:0] body_bus_y;
 
   // --- före instansen ---
   wire                  self_hit;
   reg                   game_over = 1'b0;
-  wire                  tick_run;  // deklaration
-
 
 
   // Latcha game_over på självkrock
@@ -161,6 +145,7 @@ module top_snake_step2 (
     else if (tick && self_hit) game_over <= 1'b1;
   end
 
+  wire                  tick_run;  // deklaration
   assign tick_run = tick & ~game_over;  // definiera innan instansen
 
   snake_core_grow #(
@@ -195,7 +180,6 @@ always @(posedge clk_pix) begin
   else if (tick) moved_once <= 1'b1;
 end
 
-
   apple_simple u_apple (
       .clk_pix(clk_pix),
       .reset_n(reset_n),
@@ -205,6 +189,9 @@ end
       .apple_x(apple_x),
       .apple_y(apple_y)
   );
+
+
+
 
   wire [3:0] score_tens, score_ones;
 
@@ -216,6 +203,7 @@ end
       .ones   (score_ones)
   );
 
+wire score_pix_on;  
 
 
   score_display #(
@@ -230,23 +218,24 @@ end
       .pixel_on(score_pix_on)
   );
 
-  // === Latch per frame ===
-  reg [9:0] head_x_d, apple_x_d;
-  reg [8:0] head_y_d, apple_y_d;
-  reg [7:0] snake_len_d = 8'd2;
-  reg [MAX_LEN*10-1:0] body_bus_x_d;
-  reg [MAX_LEN*9 -1:0] body_bus_y_d;
+wire [9:0] head_x_d, apple_x_d;
+wire [8:0] head_y_d, apple_y_d;
+wire [7:0] snake_len_d;
+wire [MAX_LEN*10-1:0] body_bus_x_d;
+wire [MAX_LEN*9 -1:0] body_bus_y_d;
 
-  always @(posedge clk_pix)
-    if (frame_start) begin
-      head_x_d     <= head_x;
-      head_y_d     <= head_y;
-      apple_x_d    <= apple_x;
-      apple_y_d    <= apple_y;
-      snake_len_d  <= snake_len;
-      body_bus_x_d <= body_bus_x;
-      body_bus_y_d <= body_bus_y;
-    end
+frame_latch #(.MAX_LEN(MAX_LEN)) u_latch (
+  .clk_pix(clk_pix), .frame_start(frame_start),
+  .head_x(head_x), .head_y(head_y),
+  .apple_x(apple_x), .apple_y(apple_y),
+  .snake_len(snake_len),
+  .body_bus_x(body_bus_x), .body_bus_y(body_bus_y),
+  .head_x_d(head_x_d), .head_y_d(head_y_d),
+  .apple_x_d(apple_x_d), .apple_y_d(apple_y_d),
+  .snake_len_d(snake_len_d),
+  .body_bus_x_d(body_bus_x_d), .body_bus_y_d(body_bus_y_d)
+);
+
 
   wire head_px, body_px, apple_px, border_px;
 

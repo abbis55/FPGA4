@@ -30,8 +30,9 @@ module snake_render_segments #(
     output wire border_px
 );
   // Härledda konstanter (spelplan)
-  localparam [9:0] MAX_X = (GRID_W - 2) * CELL;  // 620 vid CELL=10
-  localparam [8:0] MAX_Y = (GRID_H - 2) * CELL;  // 460 vid CELL=10
+localparam [9:0] MAX_X = 10'd620; // vid GRID_W=64, CELL=10
+localparam [8:0] MAX_Y = 9'd460;  // vid GRID_H=48, CELL=10
+
 
   // Hjälp att bredda Y till 10 bit för +CELL
   wire [9:0] hy10 = {1'b0, head_y_d};
