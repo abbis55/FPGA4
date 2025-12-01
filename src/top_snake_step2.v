@@ -194,7 +194,19 @@ assign tick_run = tick & ~game_over;   // definiera innan instansen
     .apple_y(apple_y)
   );
 
+wire score_pix_on;
 
+score_display #(
+  .SCORE_X(16),   // flytta siffrorna med dessa två
+  .SCORE_Y(16),
+  .SCALE  (3)
+) score_ui (
+  .pix_x(x),
+  .pix_y(y),
+  .tens (score_tens),
+  .ones (score_ones),
+  .pixel_on(score_pix_on)
+);
 
 
   // === Kollision huvud vs äpple (edge-detekterad puls) ===
@@ -221,6 +233,27 @@ assign tick_run = tick & ~game_over;   // definiera innan instansen
   end
 
 
+
+// === Score som två BCD-siffror (0..99) ===
+reg [3:0] score_ones = 4'd0;
+reg [3:0] score_tens = 4'd0;
+
+always @(posedge clk_pix) begin
+  if (!reset_n) begin
+    score_ones <= 4'd0;
+    score_tens <= 4'd0;
+  end else if (eat_evt_r) begin
+    if (score_ones == 4'd9) begin
+      score_ones <= 4'd0;
+      if (score_tens == 4'd9)
+        score_tens <= 4'd0;
+      else
+        score_tens <= score_tens + 4'd1;
+    end else begin
+      score_ones <= score_ones + 4'd1;
+    end
+  end
+end
 
 
 // === Latch per frame ===
@@ -291,15 +324,17 @@ wire border_px =
 
 
 // färger
-assign VGA_R = disp ? ( border_px ? 4'hF : (apple_px ? 4'hF : 4'h0) ) : 4'h0;
+assign VGA_R = disp ? ( score_pix_on ? 4'hF :
+                        border_px    ? 4'hF :
+                        apple_px     ? 4'hF : 4'h0 ) : 4'h0;
 
-assign VGA_G = disp ? ( head_px ? 4'hF :
-                        body_px ? 4'h8 :
-                        border_px ? 4'hF :
-                        4'h0 ) : 4'h0;
+assign VGA_G = disp ? ( score_pix_on ? 4'hF :
+                        head_px      ? 4'hF :
+                        body_px      ? 4'h8 :
+                        border_px    ? 4'hF : 4'h0 ) : 4'h0;
 
-assign VGA_B = disp ? ( border_px ? 4'hF : 4'h0 ) : 4'h0;
-
+assign VGA_B = disp ? ( score_pix_on ? 4'hF :
+                        border_px    ? 4'hF : 4'h0 ) : 4'h0;
 
 
 endmodule
