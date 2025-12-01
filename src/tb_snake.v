@@ -1,4 +1,4 @@
-`timescale 1ns/1ps
+`timescale 1ns / 1ps
 
 module tb_snake;
   reg CLOCK_50 = 0;
@@ -15,25 +15,25 @@ module tb_snake;
 
   // Instans av din toppmodul
   top_snake_step2 dut (
-    .CLOCK_50(CLOCK_50),
-    .BTN_UP_N(BTN_UP_N),
-    .BTN_LEFT_N(BTN_LEFT_N),
-    .BTN_DOWN_N(BTN_DOWN_N),
-    .BTN_RIGHT_N(BTN_RIGHT_N),
-    .VGA_R(VGA_R),
-    .VGA_G(VGA_G),
-    .VGA_B(VGA_B),
-    .VGA_HS(VGA_HS),
-    .VGA_VS(VGA_VS)
+      .CLOCK_50(CLOCK_50),
+      .BTN_UP_N(BTN_UP_N),
+      .BTN_LEFT_N(BTN_LEFT_N),
+      .BTN_DOWN_N(BTN_DOWN_N),
+      .BTN_RIGHT_N(BTN_RIGHT_N),
+      .VGA_R(VGA_R),
+      .VGA_G(VGA_G),
+      .VGA_B(VGA_B),
+      .VGA_HS(VGA_HS),
+      .VGA_VS(VGA_VS)
   );
 
-initial begin
-  `ifdef DUMP
+  initial begin
+`ifdef DUMP
     $dumpfile("snake.vcd");
     $dumpvars(0, dut);
-  `endif
+`endif
 
-  #20_000_000 $finish;  // 20 ms
-end
+    #20_000_000 $finish;  // 20 ms
+  end
 
 endmodule
